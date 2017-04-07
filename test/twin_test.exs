@@ -68,6 +68,16 @@ defmodule TwinTest do
     assert_called Dep, :id, [2]
   end
 
+  test "verify stubs when not called" do
+    verify_stubs()
+  end
+
+  test "verify stubs when called" do
+    stub(Dep, :one, 10)
+    App.run
+    verify_stubs()
+  end
+
   test "keep stub local to current process" do
     out = self()
     {pid, ref} = spawn_monitor fn ->

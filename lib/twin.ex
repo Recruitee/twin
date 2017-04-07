@@ -13,30 +13,28 @@ defmodule Twin do
   end
 
   ## MACROS
-  defmacro assert_called(mod, fun) do
-    quote bind_quoted: [mod: mod, fun: fun] do
-      assert Twin.called?(mod, fun), message: "#{mod}.#{fun} was not called"
-    end
+  def assert_called(mod, fun) do
+    ExUnit.Assertions.assert Twin.called?(mod, fun), "#{mod}.#{fun} was not called"
   end
 
-  defmacro assert_called(mod, fun, args) do
-    quote do
-      assert Twin.called?(unquote(mod), unquote(fun), unquote(args)),
-        message: "#{unquote(mod)}.#{unquote(fun)}(#{unquote_splicing(args)}) was not called"
-    end
+  def assert_called(mod, fun, args) do
+    ExUnit.Assertions.assert Twin.called?(mod, fun, args),
+       "#{mod}.#{fun}(#{args |> Enum.map(&inspect/1) |> Enum.join(", ")}) was not called"
   end
 
-  defmacro refute_called(mod, fun) do
-    quote bind_quoted: [mod: mod, fun: fun] do
-      refute Twin.called?(mod, fun), message: "#{mod}.#{fun} was called"
-    end
+  def refute_called(mod, fun) do
+    ExUnit.Assertions.refute Twin.called?(mod, fun), "#{mod}.#{fun} was called"
   end
 
-  defmacro refute_called(mod, fun, args) do
-    quote do
-      refute Twin.called?(unquote(mod), unquote(fun), unquote(args)),
-        message: "#{unquote(mod)}.#{unquote(fun)}(#{unquote_splicing(args)}) was called"
-    end
+  def refute_called(mod, fun, args) do
+    ExUnit.Assertions.refute Twin.called?(mod, fun, args),
+      "#{mod}.#{fun}(#{args |> Enum.map(&inspect/1) |> Enum.join(", ")}) was called"
+  end
+
+  def verify_stubs do
+    stubs = Twin.stubs
+    ExUnit.Assertions.assert stubs == [],
+      "Following stubs were not called:\n#{stubs |> Enum.map(&inspect/1) |> Enum.join("\n")}"
   end
 
   use GenServer
@@ -47,6 +45,7 @@ defmodule Twin do
   def call(mod, fun, args),     do: GenServer.call(__MODULE__, {:call, {mod, fun, args}})
   def called?(mod, fun),        do: GenServer.call(__MODULE__, {:called?, {mod, fun}})
   def called?(mod, fun, args),  do: GenServer.call(__MODULE__, {:called?, {mod, fun, args}})
+  def stubs(pid \\ self()),     do: GenServer.call(__MODULE__, {:stubs, pid})
 
   def stub(pid \\ self(), mod, fun, ret) do
     GenServer.call(__MODULE__, {:stub, pid, {mod, fun, ret}})
@@ -78,6 +77,10 @@ defmodule Twin do
 
   def handle_call({:called?, mfa}, {pid, _}, state) do
     {:reply, do_called?(state[pid], mfa), state}
+  end
+
+  def handle_call({:stubs, pid}, _, state) do
+    {:reply, get_in(state, [pid, :stubs]) || [], state}
   end
 
   ## INTERNALS
