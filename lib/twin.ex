@@ -12,6 +12,19 @@ defmodule Twin do
     end
   end
 
+  ## MACROS
+  defmacro assert_called(mod, fun) do
+    quote bind_quoted: [mod: mod, fun: fun] do
+      assert Twin.called?(mod, fun)
+    end
+  end
+
+  defmacro refute_called(mod, fun) do
+    quote bind_quoted: [mod: mod, fun: fun] do
+      refute Twin.called?(mod, fun)
+    end
+  end
+
   use GenServer
 
   ## CLIENT API
