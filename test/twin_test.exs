@@ -33,6 +33,15 @@ defmodule TwinTest do
     assert App.run == 3
   end
 
+  test "stub multiple return values for the same function" do
+    Dep
+    |> Twin.stub(:one, 10)
+    |> Twin.stub(:one, 20)
+
+    assert App.run == 12
+    assert App.run == 22
+  end
+
   test "track dependency calls" do
     App.run
 

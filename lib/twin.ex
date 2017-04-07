@@ -4,7 +4,7 @@ defmodule Twin do
   """
 
   ## PROXY
-  
+
   defmodule Proxy do
     def unquote(:"$handle_undefined_function")(fun, args) do
       [{__MODULE__, mod} | rest] = Enum.reverse(args)
@@ -58,18 +58,19 @@ defmodule Twin do
     {apply(m,f,a), %{stubs: %{}, history: [mfa]}}
   end
   defp do_call(%{stubs: stubs, history: history}, {m,f,a} = mfa) do
+
     # check for stubs, else pass-through
-    {ret, stubs} = case Map.pop(stubs, {m,f}) do
-      {nil, _}    -> {apply(m,f,a), stubs}
-      {ret, rest} -> {ret, rest}
+    {{_,_,ret}, stubs} = case Enum.find_index(stubs, &match?({^m, ^f, _}, &1)) do
+      nil -> {{nil,nil,apply(m,f,a)}, stubs}
+      idx -> List.pop_at(stubs, idx)
     end
 
     # save call to history
     {ret, %{stubs: stubs, history: [mfa | history]}}
   end
 
-  defp do_stub(nil, {m,f,r}), do: %{stubs: %{{m,f} => r}, history: []}
-  defp do_stub(dict, {m,f,r}), do: put_in(dict, [:stubs, {m,f}], r)
+  defp do_stub(nil, mfr), do: %{stubs: [mfr], history: []}
+  defp do_stub(dict, mfr), do: %{dict | stubs: dict.stubs ++ [mfr]}
 
   defp do_called?(nil, _), do: false
   defp do_called?(%{history: history}, {m,f}), do: Enum.find(history, &match?({^m, ^f, _}, &1)) != nil
