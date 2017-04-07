@@ -55,14 +55,14 @@ defmodule Twin do
   ## INTERNALS
 
   defp do_call(nil, {m,f,a} = mfa) do
-    {apply(m,f,a), %{stubs: %{}, history: [mfa]}}
+    {apply(m,f,a), %{stubs: [], history: [mfa]}}
   end
   defp do_call(%{stubs: stubs, history: history}, {m,f,a} = mfa) do
 
     # check for stubs, else pass-through
-    {{_,_,ret}, stubs} = case Enum.find_index(stubs, &match?({^m, ^f, _}, &1)) do
-      nil -> {{nil,nil,apply(m,f,a)}, stubs}
-      idx -> List.pop_at(stubs, idx)
+    {ret, stubs} = case find_stub(stubs, {m,f}) do
+      {nil, stubs} -> {apply(m,f,a), stubs}
+      {ret, stubs} -> {ret, stubs}
     end
 
     # save call to history
@@ -74,4 +74,9 @@ defmodule Twin do
 
   defp do_called?(nil, _), do: false
   defp do_called?(%{history: history}, {m,f}), do: Enum.find(history, &match?({^m, ^f, _}, &1)) != nil
+
+  defp find_stub(xs, mf), do: find_stub(xs, mf, [])
+  defp find_stub([], _, rest), do: {nil, Enum.reverse(rest)}
+  defp find_stub([{m,f,r} | xs], {m,f}, rest), do: {r, Enum.reverse(rest) ++ xs}
+  defp find_stub([x | xs], mf, rest), do: find_stub(xs, mf, [x | rest])
 end
