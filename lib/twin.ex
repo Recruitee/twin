@@ -15,25 +15,27 @@ defmodule Twin do
   ## MACROS
   defmacro assert_called(mod, fun) do
     quote bind_quoted: [mod: mod, fun: fun] do
-      assert Twin.called?(mod, fun)
+      assert Twin.called?(mod, fun), message: "#{mod}.#{fun} was not called"
     end
   end
 
   defmacro assert_called(mod, fun, args) do
-    quote bind_quoted: [mod: mod, fun: fun, args: args] do
-      assert Twin.called?(mod, fun, args)
+    quote do
+      assert Twin.called?(unquote(mod), unquote(fun), unquote(args)),
+        message: "#{unquote(mod)}.#{unquote(fun)}(#{unquote_splicing(args)}) was not called"
     end
   end
 
   defmacro refute_called(mod, fun) do
     quote bind_quoted: [mod: mod, fun: fun] do
-      refute Twin.called?(mod, fun)
+      refute Twin.called?(mod, fun), message: "#{mod}.#{fun} was called"
     end
   end
 
   defmacro refute_called(mod, fun, args) do
-    quote bind_quoted: [mod: mod, fun: fun, args: args] do
-      refute Twin.called?(mod, fun, args)
+    quote do
+      refute Twin.called?(unquote(mod), unquote(fun), unquote(args)),
+        message: "#{unquote(mod)}.#{unquote(fun)}(#{unquote_splicing(args)}) was called"
     end
   end
 
