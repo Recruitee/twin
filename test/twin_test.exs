@@ -5,12 +5,15 @@ defmodule TwinTest do
     def one, do: 1
     def two, do: 2
     def nop, do: 0
+
+    def id(n), do: n
   end
 
   defmodule App do
     @dep Twin.get(Dep)
 
     def run, do: @dep.one + @dep.two
+    def id(n), do: @dep.id(n)
   end
 
   import Twin
@@ -52,6 +55,17 @@ defmodule TwinTest do
     assert_called Dep, :one
     assert_called Dep, :two
     refute_called Dep, :nop
+  end
+
+  test "track dependency calls with arguments" do
+    App.id(1)
+
+    assert_called Dep, :id, [1]
+    refute_called Dep, :id, [2]
+
+    App.id(2)
+
+    assert_called Dep, :id, [2]
   end
 
   test "keep stub local to current process" do

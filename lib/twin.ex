@@ -19,9 +19,21 @@ defmodule Twin do
     end
   end
 
+  defmacro assert_called(mod, fun, args) do
+    quote bind_quoted: [mod: mod, fun: fun, args: args] do
+      assert Twin.called?(mod, fun, args)
+    end
+  end
+
   defmacro refute_called(mod, fun) do
     quote bind_quoted: [mod: mod, fun: fun] do
       refute Twin.called?(mod, fun)
+    end
+  end
+
+  defmacro refute_called(mod, fun, args) do
+    quote bind_quoted: [mod: mod, fun: fun, args: args] do
+      refute Twin.called?(mod, fun, args)
     end
   end
 
@@ -29,9 +41,10 @@ defmodule Twin do
 
   ## CLIENT API
 
-  def start_link,             do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
-  def call(mod, fun, args),   do: GenServer.call(__MODULE__, {:call, {mod, fun, args}})
-  def called?(mod, fun),      do: GenServer.call(__MODULE__, {:called?, {mod, fun}})
+  def start_link,               do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  def call(mod, fun, args),     do: GenServer.call(__MODULE__, {:call, {mod, fun, args}})
+  def called?(mod, fun),        do: GenServer.call(__MODULE__, {:called?, {mod, fun}})
+  def called?(mod, fun, args),  do: GenServer.call(__MODULE__, {:called?, {mod, fun, args}})
 
   def stub(pid \\ self(), mod, fun, ret) do
     GenServer.call(__MODULE__, {:stub, pid, {mod, fun, ret}})
@@ -61,8 +74,8 @@ defmodule Twin do
     {:reply, :ok, Map.put(state, pid, dict)}
   end
 
-  def handle_call({:called?, mf}, {pid, _}, state) do
-    {:reply, do_called?(state[pid], mf), state}
+  def handle_call({:called?, mfa}, {pid, _}, state) do
+    {:reply, do_called?(state[pid], mfa), state}
   end
 
   ## INTERNALS
@@ -87,6 +100,7 @@ defmodule Twin do
 
   defp do_called?(nil, _), do: false
   defp do_called?(%{history: history}, {m,f}), do: Enum.find(history, &match?({^m, ^f, _}, &1)) != nil
+  defp do_called?(%{history: history}, {m,f,a}), do: Enum.find(history, &match?({^m, ^f, ^a}, &1)) != nil
 
   defp find_stub(xs, mf), do: find_stub(xs, mf, [])
   defp find_stub([], _, rest), do: {nil, Enum.reverse(rest)}
