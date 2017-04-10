@@ -7,6 +7,8 @@ defmodule TwinTest do
     def nop, do: 0
 
     def id(n), do: n
+
+    def current, do: self()
   end
 
   defmodule App do
@@ -14,6 +16,8 @@ defmodule TwinTest do
 
     def run, do: @dep.one + @dep.two
     def id(n), do: @dep.id(n)
+
+    def current, do: @dep.current
   end
 
   import Twin
@@ -112,5 +116,9 @@ defmodule TwinTest do
 
     send pid, :go
     assert_receive {:DOWN, ^ref, :process, _, :normal}, 100
+  end
+
+  test "execute passthrough in the same process" do
+    assert App.current == self()
   end
 end

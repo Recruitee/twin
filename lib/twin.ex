@@ -8,7 +8,11 @@ defmodule Twin do
   defmodule Proxy do
     def unquote(:"$handle_undefined_function")(fun, args) do
       [{__MODULE__, mod} | rest] = Enum.reverse(args)
-      Twin.call(mod, fun, Enum.reverse(rest))
+      args = Enum.reverse(rest)
+      case Twin.call(mod, fun, args) do
+        {:ok, ret} -> ret
+        {:error, :nostub} -> apply(mod, fun, args)
+      end
     end
   end
 
@@ -85,15 +89,15 @@ defmodule Twin do
 
   ## INTERNALS
 
-  defp do_call(nil, {m,f,a} = mfa) do
-    {apply(m,f,a), %{stubs: [], history: [mfa]}}
+  defp do_call(nil, mfa) do
+    {{:error, :nostub}, %{stubs: [], history: [mfa]}}
   end
-  defp do_call(%{stubs: stubs, history: history}, {m,f,a} = mfa) do
+  defp do_call(%{stubs: stubs, history: history}, {m,f,_} = mfa) do
 
     # check for stubs, else pass-through
     {ret, stubs} = case find_stub(stubs, {m,f}) do
-      {nil, stubs} -> {apply(m,f,a), stubs}
-      {ret, stubs} -> {ret, stubs}
+      {nil, stubs} -> {{:error, :nostub}, stubs}
+      {ret, stubs} -> {{:ok, ret}, stubs}
     end
 
     # save call to history
